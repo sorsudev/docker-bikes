@@ -1,0 +1,53 @@
+version: "3"
+
+networks:
+  http_network:
+    external: true
+  mail_network:
+    external: false
+
+services:
+  dmsite:
+    build: .
+    container_name: dm-site
+    labels:
+      - traefik.enable=true
+      - traefik.backend=dm-site
+      - traefik.frontend.rule=Host:host.url
+      - traefik.port=3003
+      - traefik.docker.network=http_network
+    environment:
+        DB_HOST: postgres
+        DB_USER: user
+        DB_PASS: pass
+        DB_NAME: dbName
+        VERIFICATION_TOKEN: token
+        PAGE_ACCESS_TOKEN: untoken
+        EMAIL_USER: user@mail.com
+        EMAIL_PASS: passwordMail
+        EMAIL_FROM: from@mail.com
+        TOKEN_SECRET: secretWord
+    networks:
+      - mail_network
+      - http_network
+    links:
+      - db
+
+  db:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    image: postgres:11-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: pass
+      POSTGRES_USER: user
+      POSTGRES_DB: dbName
+    volumes:
+      - "./databasedata:/var/lib/postgresql/data"
+    networks:
+      - mail_network
+      - http_network
